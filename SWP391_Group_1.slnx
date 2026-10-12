@@ -1,5 +1,5 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/SportsCenterAPI/SportsCenterAPI.csproj" />
+  <Folder Name="/backend/src/">
+    <Project Path="backend/src/SportsCenterAPI/SportsCenterAPI.csproj" />
   </Folder>
 </Solution>
