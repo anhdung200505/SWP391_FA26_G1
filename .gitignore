@@ -1,0 +1,32 @@
+## Wildcard ignores
+*.user
+*.suo
+.vs/
+[Bb]in/
+[Oo]bj/
+*.log
+
+## .NET
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Sensitive configuration — NEVER commit these files
+## Use User Secrets (dotnet user-secrets) or environment variables instead
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.example.json
+
+## User Secrets
+secrets.json
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
