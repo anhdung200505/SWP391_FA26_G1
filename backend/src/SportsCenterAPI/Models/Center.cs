@@ -1,7 +1,7 @@
 namespace SportsCenterAPI.Models;
 
 /// <summary>
-/// Maps to dbo.Center in SportsCenterDB.
+/// Trung tâm thể thao. Map bảng dbo.Center.
 /// </summary>
 public class Center
 {
@@ -11,6 +11,6 @@ public class Center
     public string? Hotline { get; set; }
     public string? Email { get; set; }
 
-    // Navigation
+    // Danh sách user thuộc trung tâm này.
     public ICollection<User> Users { get; set; } = new List<User>();
 }

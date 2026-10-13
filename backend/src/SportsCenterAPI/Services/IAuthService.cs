@@ -3,19 +3,17 @@ using SportsCenterAPI.DTOs.Auth;
 namespace SportsCenterAPI.Services;
 
 /// <summary>
-/// Contract for authentication business logic.
+/// Nghiệp vụ đăng nhập và lấy hồ sơ user hiện tại.
 /// </summary>
 public interface IAuthService
 {
     /// <summary>
-    /// Validates credentials and returns login response with access token.
-    /// Returns null if credentials are invalid or account is not ACTIVE.
+    /// Kiểm tra tài khoản và trả token. Null nếu sai mật khẩu hoặc tài khoản không ACTIVE.
     /// </summary>
     Task<LoginResponseDto?> LoginAsync(LoginRequestDto request);
 
     /// <summary>
-    /// Returns the currently authenticated user's public info by their ID (from JWT claims).
-    /// Returns null if user is not found.
+    /// Lấy hồ sơ public theo id trong JWT. Null nếu không còn user đó.
     /// </summary>
     Task<UserInfoDto?> GetCurrentUserAsync(int userId);
 }

@@ -1,8 +1,7 @@
 namespace SportsCenterAPI.DTOs.Auth;
 
 /// <summary>
-/// Represents the authenticated user's public information.
-/// Never includes password_hash or any sensitive internal data.
+/// Thông tin user trả về cho client. Không có mật khẩu.
 /// </summary>
 public class UserInfoDto
 {

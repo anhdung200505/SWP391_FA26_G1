@@ -1,8 +1,7 @@
 namespace SportsCenterAPI.Models;
 
 /// <summary>
-/// Maps to dbo.Role in SportsCenterDB.
-/// NOTE: Column is named "create_at" (not "created_at") in the database — mapped via Fluent API.
+/// Vai trò đăng nhập. Map bảng dbo.Role.
 /// </summary>
 public class Role
 {
@@ -11,12 +10,12 @@ public class Role
     public string? Description { get; set; }
 
     /// <summary>
-    /// Maps to the "create_at" column (typo in original schema — DO NOT rename the column).
+    /// Map cột "create_at" (tên cột trong DB bị thiếu chữ d, không đổi).
     /// </summary>
     public DateTime CreateAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 
-    // Navigation
+    // User đang giữ vai trò này.
     public ICollection<User> Users { get; set; } = new List<User>();
 }

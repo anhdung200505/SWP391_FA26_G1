@@ -1,8 +1,9 @@
+using SportsCenterAPI.Constants;
+
 namespace SportsCenterAPI.Models;
 
 /// <summary>
-/// Maps to dbo.[User] in SportsCenterDB.
-/// "User" is a reserved keyword in SQL Server — handled via [Table] attribute in Fluent API.
+/// Tài khoản đăng nhập. Map bảng dbo.[User].
 /// </summary>
 public class User
 {
@@ -14,8 +15,7 @@ public class User
     public string Username { get; set; } = string.Empty;
 
     /// <summary>
-    /// ASP.NET Core Identity V3 PBKDF2-SHA512 hash.
-    /// Never expose this field in any API response.
+    /// Hash mật khẩu (PBKDF2). Không trả field này ra API.
     /// </summary>
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -28,14 +28,12 @@ public class User
     public string? Gender { get; set; }
 
     /// <summary>
-    /// Allowed values: "ACTIVE", "INACTIVE", "SUSPENDED"
-    /// Enforced by CHECK constraint in database.
+    /// ACTIVE, INACTIVE hoặc SUSPENDED. Chỉ ACTIVE được đăng nhập.
     /// </summary>
-    public string Status { get; set; } = "ACTIVE";
+    public string Status { get; set; } = UserStatuses.Active;
 
     public DateTime CreatedAt { get; set; }
 
-    // Navigation properties
     public Role Role { get; set; } = null!;
     public Center Center { get; set; } = null!;
 }

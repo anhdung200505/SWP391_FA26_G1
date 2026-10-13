@@ -1,8 +1,7 @@
 namespace SportsCenterAPI.DTOs.Auth;
 
 /// <summary>
-/// Response body for POST /api/auth/login.
-/// Includes JWT access token and minimal user info.
+/// Kết quả đăng nhập: token JWT và thông tin user.
 /// </summary>
 public class LoginResponseDto
 {
@@ -10,7 +9,7 @@ public class LoginResponseDto
     public string TokenType { get; set; } = "Bearer";
 
     /// <summary>
-    /// Access token lifetime in seconds.
+    /// Thời gian sống của token, tính bằng giây.
     /// </summary>
     public int ExpiresIn { get; set; }
 

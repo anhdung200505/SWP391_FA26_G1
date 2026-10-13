@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace SportsCenterAPI.DTOs.Auth;
 
 /// <summary>
-/// Request body for POST /api/auth/login.
+/// Body của POST /api/auth/login.
 /// </summary>
 public class LoginRequestDto
 {

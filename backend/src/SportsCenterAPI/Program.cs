@@ -4,50 +4,45 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SportsCenterAPI.Configuration;
+using SportsCenterAPI.Constants;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =========================================================================
-// 1. Configuration — bind JwtSettings
-//    Signing key is loaded from User Secrets (dev) or environment variable:
-//    Environment variable name: JwtSettings__SigningKey
-// =========================================================================
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("JwtSettings"));
+// 1. JWT: issuer/audience lấy từ appsettings, khóa ký lấy từ User Secrets hoặc biến môi trường.
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-var jwtSettings = builder.Configuration
-    .GetSection("JwtSettings")
-    .Get<JwtSettings>()
-    ?? throw new InvalidOperationException("JwtSettings section is missing from configuration.");
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
+    ?? throw new InvalidOperationException("Thiếu mục JwtSettings trong cấu hình.");
 
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
+{
     throw new InvalidOperationException(
-        "JwtSettings:SigningKey is not configured. " +
-        "Set it via User Secrets: dotnet user-secrets set \"JwtSettings:SigningKey\" \"<your-key>\" " +
-        "or via environment variable JwtSettings__SigningKey.");
+        "Chưa có JwtSettings:SigningKey. Đặt bằng User Secrets hoặc biến môi trường JwtSettings__SigningKey.");
+}
 
-// =========================================================================
-// 2. Database — EF Core with SQL Server
-//    Connection string from User Secrets or environment variable:
-//    ConnectionStrings__SportsCenterDB
-// =========================================================================
+if (jwtSettings.SigningKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SigningKey phải dài ít nhất 32 ký tự để ký HMAC-SHA256.");
+}
+
+// 2. Database: chuỗi kết nối không để trong appsettings.
 builder.Services.AddDbContext<SportsCenterDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("SportsCenterDB");
     if (string.IsNullOrWhiteSpace(connectionString))
+    {
         throw new InvalidOperationException(
-            "ConnectionStrings:SportsCenterDB is not configured. " +
-            "Set it via User Secrets or environment variable ConnectionStrings__SportsCenterDB.");
+            "Chưa có ConnectionStrings:SportsCenterDB. Đặt bằng User Secrets hoặc biến môi trường ConnectionStrings__SportsCenterDB.");
+    }
 
     options.UseSqlServer(connectionString);
 });
 
-// =========================================================================
-// 3. Authentication — JWT Bearer
-// =========================================================================
-var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
+// 3. Xác thực JWT. Token sai người ký, issuer, audience hoặc hết hạn thì từ chối.
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey));
 
 builder.Services.AddAuthentication(options =>
 {
@@ -59,62 +54,43 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-
+        IssuerSigningKey = signingKey,
         ValidateIssuer = true,
         ValidIssuer = jwtSettings.Issuer,
-
         ValidateAudience = true,
         ValidAudience = jwtSettings.Audience,
-
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero  // No tolerance — exact expiry
+        ClockSkew = TimeSpan.Zero
     };
 
-    // Log authentication failures without revealing token content
+    // Chỉ ghi loại lỗi, không ghi nội dung token.
     options.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = context =>
         {
-            var logger = context.HttpContext.RequestServices
-                .GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("JWT authentication failed: {ErrorType}",
-                context.Exception.GetType().Name);
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("JWT authentication failed: {ErrorType}", context.Exception.GetType().Name);
             return Task.CompletedTask;
         }
     };
 });
 
-// =========================================================================
-// 4. Authorization — Role-Based
-// =========================================================================
+// 4. Policy theo vai trò, gắn lên controller khi có API tương ứng.
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("CenterManagerOnly",
-        policy => policy.RequireRole("CENTER_MANAGER"));
-    options.AddPolicy("CoachOnly",
-        policy => policy.RequireRole("COACH"));
-    options.AddPolicy("ReceptionistOnly",
-        policy => policy.RequireRole("RECEPTIONIST"));
-    options.AddPolicy("MemberOnly",
-        policy => policy.RequireRole("MEMBER"));
-    options.AddPolicy("StaffOnly",
-        policy => policy.RequireRole("CENTER_MANAGER", "COACH", "RECEPTIONIST"));
+    options.AddPolicy("CenterManagerOnly", policy => policy.RequireRole(RoleNames.CenterManager));
+    options.AddPolicy("CoachOnly", policy => policy.RequireRole(RoleNames.Coach));
+    options.AddPolicy("ReceptionistOnly", policy => policy.RequireRole(RoleNames.Receptionist));
+    options.AddPolicy("MemberOnly", policy => policy.RequireRole(RoleNames.Member));
+    options.AddPolicy("StaffOnly", policy => policy.RequireRole(
+        RoleNames.CenterManager, RoleNames.Coach, RoleNames.Receptionist));
 });
 
-// =========================================================================
-// 5. Application Services
-// =========================================================================
+// 5. Service nghiệp vụ, rồi bật controller.
 builder.Services.AddScoped<IAuthService, AuthService>();
-
-// =========================================================================
-// 6. Controllers
-// =========================================================================
 builder.Services.AddControllers();
 
-// =========================================================================
-// 7. Swagger / OpenAPI — with Bearer token support
-// =========================================================================
+// 6. Swagger, kèm ô nhập token Bearer.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -122,14 +98,13 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Sports Center API",
         Version = "v1",
-        Description = "Authentication API for Sports Center Management System — SWP391 Group 1"
+        Description = "API xác thực cho hệ thống quản lý trung tâm thể thao — SWP391 Nhóm 1"
     });
 
-    // Add Bearer token authentication to Swagger UI
     var securityScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Description = "Enter JWT Bearer token: **Bearer {token}**",
+        Description = "Nhập token dạng: Bearer {token}",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
@@ -148,55 +123,42 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// =========================================================================
-// 8. CORS — configure for known frontend origins only
-//    Update AllowedOrigins in appsettings when frontend URL is known
-// =========================================================================
+// 7. Chỉ cho frontend đã khai báo. Chưa cấu hình thì dùng localhost lúc dev.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        var allowedOrigins = builder.Configuration
-            .GetSection("AllowedOrigins")
-            .Get<string[]>() ?? Array.Empty<string>();
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+            ?? Array.Empty<string>();
 
-        if (allowedOrigins.Length > 0)
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        else
-            // Development fallback only — restrict in production
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+        var origins = allowedOrigins.Length > 0
+            ? allowedOrigins
+            : new[] { "http://localhost:3000", "http://localhost:5173" };
+
+        policy.WithOrigins(origins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
-// =========================================================================
-// Build
-// =========================================================================
 var app = builder.Build();
 
-// =========================================================================
-// Middleware Pipeline
-// =========================================================================
+// Swagger chỉ mở khi chạy Development.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sports Center API v1");
-        c.RoutePrefix = "swagger"; // Access at /swagger
+        c.RoutePrefix = "swagger";
     });
 }
 
+// Thứ tự bắt buộc: CORS, rồi xác thực, rồi phân quyền, rồi controller.
 app.UseHttpsRedirection();
 app.UseCors("FrontendPolicy");
-
-// Order matters: Authentication must come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

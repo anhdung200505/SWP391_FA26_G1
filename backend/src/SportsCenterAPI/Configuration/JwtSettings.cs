@@ -1,8 +1,8 @@
 namespace SportsCenterAPI.Configuration;
 
 /// <summary>
-/// Bound from appsettings.json section "JwtSettings".
-/// Signing key must be provided via User Secrets or environment variables — never hard-coded.
+/// Cấu hình JWT, đọc từ mục "JwtSettings".
+/// Khóa ký lấy từ User Secrets hoặc biến môi trường, không ghi cứng trong file.
 /// </summary>
 public class JwtSettings
 {
@@ -10,13 +10,13 @@ public class JwtSettings
     public string Audience { get; set; } = string.Empty;
 
     /// <summary>
-    /// Access token lifetime in minutes. Default: 60.
+    /// Số phút token còn hiệu lực. Mặc định 60.
     /// </summary>
     public int AccessTokenExpirationMinutes { get; set; } = 60;
 
     /// <summary>
-    /// Loaded from User Secrets or environment variable "JwtSettings__SigningKey".
-    /// Must be at least 32 characters (256 bits) for HMAC-SHA256.
+    /// Khóa ký HMAC-SHA256, tối thiểu 32 ký tự.
+    /// Biến môi trường: JwtSettings__SigningKey.
     /// </summary>
     public string SigningKey { get; set; } = string.Empty;
 }
